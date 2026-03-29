@@ -20,6 +20,9 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { getAccounts, createJournalEntry } from "@/lib/accounting-actions";
 import { Account } from "@/types/accounting";
+import { createClient } from "@/lib/supabase";
+
+const supabase = createClient();
 
 interface JournalLineItem {
   id: string;
