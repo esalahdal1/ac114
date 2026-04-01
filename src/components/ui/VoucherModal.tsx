@@ -18,6 +18,9 @@ export const VoucherModal = ({ isOpen, onClose, entryId }: VoucherModalProps) =>
 
   useEffect(() => {
     if (isOpen && entryId) {
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+      
       const fetchDetails = async () => {
         setLoading(true);
         try {
@@ -32,7 +35,13 @@ export const VoucherModal = ({ isOpen, onClose, entryId }: VoucherModalProps) =>
       fetchDetails();
     } else {
       setData(null);
+      // Restore body scroll when modal is closed
+      document.body.style.overflow = 'unset';
     }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen, entryId]);
 
   if (!isOpen) return null;
@@ -52,9 +61,9 @@ export const VoucherModal = ({ isOpen, onClose, entryId }: VoucherModalProps) =>
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden"
+          className="relative w-full max-w-4xl h-fit max-h-[90vh] overflow-hidden flex flex-col"
         >
-          <GlassCard className="flex flex-col h-full border-white/10 shadow-2xl overflow-hidden bg-[#0f0f1a]">
+          <GlassCard className="flex flex-col flex-1 border-white/10 shadow-2xl overflow-hidden bg-[#0f0f1a]">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/5">
               <div className="flex gap-3">
