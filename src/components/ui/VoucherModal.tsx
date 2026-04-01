@@ -1,10 +1,39 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Printer, Download, Calendar, Hash, FileText } from "lucide-react";
+import { X, Printer, Download, Calendar, Hash, FileText, Loader2 } from "lucide-react";
 import { GlassCard } from "./GlassCard";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getJournalEntryDetails } from "@/lib/accounting-actions";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+
+const A4_STYLES = `
+  @media print {
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+    body {
+      background: white !important;
+    }
+    .print-hidden {
+      display: none !important;
+    }
+    .print-content {
+      background: white !important;
+      color: black !important;
+      padding: 0 !important;
+      width: 100% !important;
+    }
+    .print-text-black {
+      color: black !important;
+    }
+    .print-border-black {
+      border-color: #eee !important;
+    }
+  }
+`;
 
 interface VoucherModalProps {
   isOpen: boolean;
@@ -15,6 +44,41 @@ interface VoucherModalProps {
 export const VoucherModal = ({ isOpen, onClose, entryId }: VoucherModalProps) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const voucherRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPDF = async () => {
+    if (!voucherRef.current) return;
+    setExporting(true);
+    try {
+      const element = voucherRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#0f0f1a"
+      });
+      
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Voucher_${data?.reference || 'Entry'}_${data?.date}.pdf`);
+    } catch (error) {
+      console.error("PDF Export Error:", error);
+      alert("حدث خطأ أثناء تصدير الملف");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && entryId) {
@@ -48,7 +112,8 @@ export const VoucherModal = ({ isOpen, onClose, entryId }: VoucherModalProps) =>
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <style>{A4_STYLES}</style>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 print:p-0">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -74,8 +139,13 @@ export const VoucherModal = ({ isOpen, onClose, entryId }: VoucherModalProps) =>
                 >
                   <Printer className="w-5 h-5" />
                 </button>
-                <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white smooth-transition" title="تصدير PDF">
-                  <Download className="w-5 h-5" />
+                <button 
+                  onClick={handleDownloadPDF}
+                  disabled={exporting}
+                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white smooth-transition disabled:opacity-50" 
+                  title="تصدير PDF"
+                >
+                  {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                 </button>
               </div>
               <h2 className="text-xl font-bold text-white">تفاصيل قيد يومي</h2>
@@ -88,7 +158,7 @@ export const VoucherModal = ({ isOpen, onClose, entryId }: VoucherModalProps) =>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8 space-y-8 print:p-0">
+            <div ref={voucherRef} className="flex-1 overflow-y-auto p-8 space-y-8 print:p-0 bg-[#0f0f1a]">
               {loading ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="w-8 h-8 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
