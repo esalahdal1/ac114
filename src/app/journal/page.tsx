@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { getAccounts, createJournalEntry } from "@/lib/accounting-actions";
 import { Account } from "@/types/accounting";
 import { createClient } from "@/lib/supabase";
+import { VoucherModal } from "@/components/ui/VoucherModal";
 
 const supabase = createClient();
 
@@ -44,6 +45,8 @@ export default function JournalPage() {
   ]);
   const [showHistory, setShowHistory] = useState(false);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [isVoucherOpen, setIsVoucherOpen] = useState(false);
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -155,9 +158,16 @@ export default function JournalPage() {
                     <h3 className="text-sm font-bold text-purple-400 uppercase tracking-wider mb-4 text-right">آخر القيود المسجلة</h3>
                     <div className="space-y-3">
                       {recentEntries.length > 0 ? recentEntries.map((entry) => (
-                        <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 flex-row-reverse">
+                        <div 
+                          key={entry.id} 
+                          onClick={() => {
+                            setSelectedEntryId(entry.id);
+                            setIsVoucherOpen(true);
+                          }}
+                          className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 hover:border-purple-500/30 cursor-pointer smooth-transition flex-row-reverse group"
+                        >
                           <div className="flex flex-col text-right">
-                            <span className="text-sm font-medium text-white">{entry.reference || 'بدون مرجع'}</span>
+                            <span className="text-sm font-medium text-white group-hover:text-purple-400">{entry.reference || 'بدون مرجع'}</span>
                             <span className="text-xs text-gray-500">{entry.date}</span>
                           </div>
                           <span className="text-xs text-gray-400 truncate max-w-[200px]">{entry.description}</span>
@@ -365,6 +375,12 @@ export default function JournalPage() {
             </div>
           </div>
         </PageTransition>
+
+        <VoucherModal 
+          isOpen={isVoucherOpen}
+          onClose={() => setIsVoucherOpen(false)}
+          entryId={selectedEntryId}
+        />
       </main>
     </div>
   );

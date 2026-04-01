@@ -21,6 +21,26 @@ export const deleteAccount = async (id: string) => {
   if (error) throw error;
 };
 
+export const getJournalEntryDetails = async (entryId: string) => {
+  const { data: entry, error: entryError } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('id', entryId)
+    .single();
+  
+  if (entryError) throw entryError;
+
+  const { data: lines, error: linesError } = await supabase
+    .from('journal_lines')
+    .select('*, accounts(name, code)')
+    .eq('entry_id', entryId)
+    .order('id');
+
+  if (linesError) throw linesError;
+
+  return { ...entry, lines };
+};
+
 export const createAccount = async (account: Partial<Account>) => {
   const { data, error } = await supabase
     .from('accounts')
