@@ -27,6 +27,14 @@ const TreeItem = ({ item, allAccounts, onRefresh, depth = 0 }: { item: Account; 
   const children = allAccounts.filter(acc => acc.parent_id === item.id);
   const isGroup = item.is_group || children.length > 0;
 
+  const getAggregateBalance = (account: Account): number => {
+    if (!account.is_group) return Number(account.balance) || 0;
+    const accountChildren = allAccounts.filter(a => a.parent_id === account.id);
+    return accountChildren.reduce((sum, child) => sum + getAggregateBalance(child), 0);
+  };
+
+  const displayBalance = isGroup ? getAggregateBalance(item) : item.balance;
+
   const handleDelete = async () => {
     if (children.length > 0) {
       alert("لا يمكن حذف حساب يحتوي على حسابات فرعية. قم بحذف الحسابات الفرعية أولاً.");
@@ -90,7 +98,7 @@ const TreeItem = ({ item, allAccounts, onRefresh, depth = 0 }: { item: Account; 
             <Trash2 className="w-4 h-4" />
           </button>
           <span className="text-sm font-semibold text-white w-32 text-left">
-            {new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(item.balance)}
+            {new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(displayBalance)}
           </span>
           <span className="text-xs font-mono text-gray-500">
             {item.type === 'Asset' ? 'أصل' : 
@@ -192,12 +200,42 @@ export default function AccountsPage() {
               ) : (
                 <div className="space-y-2">
                   {searchTerm 
-                    ? filteredAccounts.map(acc => (
-                        <div key={acc.id} className="p-3 border-b border-white/5 flex justify-between">
-                          <span className="text-white">{acc.name}</span>
-                          <span className="text-gray-400 font-mono">{acc.code}</span>
-                        </div>
-                      ))
+                    ? filteredAccounts.map(acc => {
+                        const getAggBal = (a: Account): number => {
+                          if (!a.is_group) return Number(a.balance) || 0;
+                          const children = accounts.filter(child => child.parent_id === a.id);
+                          return children.reduce((sum, child) => sum + getAggBal(child), 0);
+                        };
+                        const bal = acc.is_group ? getAggBal(acc) : acc.balance;
+                        
+                        return (
+                          <div key={acc.id} className="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/30 smooth-transition flex items-center justify-between group flex-row-reverse">
+                            <div className="flex items-center gap-4 flex-row-reverse">
+                              <div className={cn(
+                                "p-2 rounded-lg bg-white/5",
+                                acc.is_group ? "text-purple-400" : "text-blue-400"
+                              )}>
+                                {acc.is_group ? <Folder className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium text-white">{acc.name}</p>
+                                <p className="text-xs text-gray-500 font-mono">{acc.code}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-8 flex-row-reverse">
+                              <span className="text-sm font-bold text-white min-w-[120px] text-left">
+                                {new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(bal)}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {acc.type === 'Asset' ? 'أصل' : 
+                                 acc.type === 'Liability' ? 'خصم' : 
+                                 acc.type === 'Equity' ? 'حقوق' : 
+                                 acc.type === 'Revenue' ? 'إيراد' : 'مصروف'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
                     : rootAccounts.map((item) => (
                         <TreeItem key={item.id} item={item} allAccounts={accounts} onRefresh={fetchAccounts} />
                       ))
